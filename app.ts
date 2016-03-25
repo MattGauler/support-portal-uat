@@ -94,7 +94,7 @@ var managers = new Managers.Managers();
 
 var Updater = require('./updater/updater');
 
-var u = new Updater(10000);
+var u = new Updater(1000);
 u.init();
 u.on('Event',function () {
    managers.commsManager.commsWorker.receiveQueueMessage();
