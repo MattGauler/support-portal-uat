@@ -1,0 +1,48 @@
+{
+    "compilerOptions": {
+        "module": "commonjs",
+        "sourceMap": false
+    },
+    "filesGlob": [
+        "./**/*.ts",
+        "!./node_modules/**/*.ts"
+    ],
+    "files": [
+        "./_tsDefinitions/azure-mobile-apps/azure-mobile-apps-tests.ts",
+        "./_tsDefinitions/azure-mobile-apps/azure-mobile-apps.d.ts",
+        "./_tsDefinitions/azure-mobile-services-client/AzureMobileServicesClient.d.ts",
+        "./_tsDefinitions/azure-sb/azure-sb-tests.ts",
+        "./_tsDefinitions/azure-sb/azure-sb.d.ts",
+        "./_tsDefinitions/express/express.d.ts",
+        "./_tsDefinitions/mime/mime.d.ts",
+        "./_tsDefinitions/node/node-0.12.d.ts",
+        "./_tsDefinitions/serve-static/serve-static.d.ts",
+        "./_tsDefinitions/tedious/tedious-tests.ts",
+        "./_tsDefinitions/tedious/tedious.d.ts",
+        "./app.ts",
+        "./interfaces/commsInterface.ts",
+        "./interfaces/supportMessage.ts",
+        "./managers/_managers.ts",
+        "./managers/appManager.ts",
+        "./managers/commsManager.ts",
+        "./managers/dbManager.ts",
+        "./managers/serviceBusManager.ts",
+        "./routes/api/connectedDevices.ts",
+        "./routes/api/createUser.ts",
+        "./routes/api/instruction.ts",
+        "./routes/api/instructionResponse.ts",
+        "./routes/api/loginEvents.ts",
+        "./routes/api/markPilot.ts",
+        "./routes/api/receiveDeviceMessage.ts",
+        "./routes/api/receivedMessageTest.ts",
+        "./routes/api/routeEvents.ts",
+        "./routes/api/sendMessageTest.ts",
+        "./routes/api/userLogin.ts",
+        "./routes/index.ts",
+        "./routes/users.ts",
+        "./updater/updater.ts"
+    ],
+    "atom": {
+        "rewriteTsconfig": true
+    }
+}
