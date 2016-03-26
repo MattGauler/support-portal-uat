@@ -98,7 +98,7 @@ var u = new Updater(1000);
 u.init();
 console.log('Timer initialised');
 u.on('Event',function () {
-   managers.commsManager.commsWorker.receiveQueueMessage();
+   managers.commsManager.commsWorker.receiveSubscriptionMessage();
    console.log('Timer tick');
 });
 
