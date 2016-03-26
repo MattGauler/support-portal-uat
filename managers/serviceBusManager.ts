@@ -14,7 +14,7 @@ export class ServiceBusManager implements Comms {
 
     constructor() {
         this.azure = require('azure');
-        this.endPoint = process.env.ServiceBusConnectionString || 'Endpoint=sb://arrowxl.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=pZ1Rq5WiC19IZOnNLyP9KWQyNxZlXQtYFIilwpNhWnU=';
+        this.endPoint = process.env.ServiceBusConnectionString || 'Endpoint=sb://prod-ct-al-driverapp.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=74Yd6uoPrvVH+MdkF/HeamK5vNjrDtht2M9W3bU0uqg=';
         this.topicName = process.env.ServiceBusReceiveTopicName || 't-support';
         this.queueName = process.env.ServiceBusReceiveQueueName || 'supportuat';
         this.subscriptionName = process.env.ServiceBusReceiveSubName || 'support-server';
