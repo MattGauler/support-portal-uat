@@ -16,11 +16,12 @@ export class ServiceBusManager implements Comms {
         this.azure = require('azure');
         this.endPoint = process.env.ServiceBusConnectionString || 'Endpoint=sb://arrowxl.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=pZ1Rq5WiC19IZOnNLyP9KWQyNxZlXQtYFIilwpNhWnU=';
         this.topicName = process.env.ServiceBusReceiveTopicName || 't-support';
+        this.queueName = process.env.ServiceBusReceiveQueueName || 'supportuat';
         this.subscriptionName = process.env.ServiceBusReceiveSubName || 'support-server';
         this.serviceBusService = this.azure.createServiceBusService(this.endPoint);
-        this.queueName = 'supportuat';
-
+        
         this.createQueue();
+        this.createTopic();
     }
 
     private createQueue(): void {
@@ -34,6 +35,18 @@ export class ServiceBusManager implements Comms {
         });
     }
 
+    private createTopic(): void {
+        this.serviceBusService.createTopicIfNotExists(this.topicName,function(error){
+            if(!error){
+                // Topic was created or exists
+                console.log('Topic created or exists.');
+            }
+            else {
+                console.log('SETUP ERROR: %s', error);
+            }
+        });
+    }
+    
     sendAndCreateQueue(message): void {
         this.serviceBusService.createQueueIfNotExists(message.customProperties.channel, (err => this.sendQueueMessage(message, err)));
     }
