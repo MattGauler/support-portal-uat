@@ -6,15 +6,27 @@ var ServiceBusManager = (function () {
         this.azure = require('azure');
         this.endPoint = process.env.ServiceBusConnectionString || 'Endpoint=sb://arrowxl.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=pZ1Rq5WiC19IZOnNLyP9KWQyNxZlXQtYFIilwpNhWnU=';
         this.topicName = process.env.ServiceBusReceiveTopicName || 't-support';
+        this.queueName = process.env.ServiceBusReceiveQueueName || 'supportuat';
         this.subscriptionName = process.env.ServiceBusReceiveSubName || 'support-server';
         this.serviceBusService = this.azure.createServiceBusService(this.endPoint);
-        this.queueName = 'supportuat';
         this.createQueue();
+        this.createTopic();
     }
     ServiceBusManager.prototype.createQueue = function () {
         this.serviceBusService.createQueueIfNotExists(this.queueName, function (error) {
             if (!error) {
                 console.log('Queue working successfully');
+            }
+            else {
+                console.log('SETUP ERROR: %s', error);
+            }
+        });
+    };
+    ServiceBusManager.prototype.createTopic = function () {
+        this.serviceBusService.createTopicIfNotExists(this.topicName, function (error) {
+            if (!error) {
+                // Topic was created or exists
+                console.log('Topic created or exists.');
             }
             else {
                 console.log('SETUP ERROR: %s', error);
