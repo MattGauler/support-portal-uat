@@ -96,8 +96,10 @@ var Updater = require('./updater/updater');
 
 var u = new Updater(1000);
 u.init();
+console.log('Timer initialised');
 u.on('Event',function () {
    managers.commsManager.commsWorker.receiveQueueMessage();
+   console.log('Timer tick');
 });
 
 module.exports = app;
