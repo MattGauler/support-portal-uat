@@ -83,6 +83,5 @@ u.init();
 console.log('Timer initialised');
 u.on('Event', function () {
     managers.commsManager.commsWorker.receiveSubscriptionMessage();
-    console.log('Timer tick');
 });
 module.exports = app;
