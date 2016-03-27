@@ -26,6 +26,7 @@
         "./managers/appManager.ts",
         "./managers/commsManager.ts",
         "./managers/dbManager.ts",
+        "./managers/messageManager.ts",
         "./managers/serviceBusManager.ts",
         "./routes/api/connectedDevices.ts",
         "./routes/api/createUser.ts",
