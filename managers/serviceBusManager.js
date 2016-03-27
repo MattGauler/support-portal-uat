@@ -63,7 +63,8 @@ var ServiceBusManager = (function () {
             });
         }
         else
-            console.log('ERROR CREATING QUEUE: %s', err);
+            console.log(message);
+        console.log('ERROR CREATING QUEUE: %s', err);
     };
     ServiceBusManager.prototype.receiveQueueMessage = function () {
         var _this = this;

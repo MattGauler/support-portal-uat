@@ -78,6 +78,7 @@ export class ServiceBusManager implements Comms {
             });
         }
         else
+            console.log(message);
             console.log('ERROR CREATING QUEUE: %s', err);
     }
 

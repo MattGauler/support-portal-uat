@@ -12,15 +12,25 @@ export class MsgManager {
     }
     
     generateBaseMessage(): any {
-        var uuid = Guid.v1();
-        var msg = {
-            id: uuid,
-            data: {
-                "@class":null
+        
+        var customProperties = {
+            id: Guid.raw(),
+            channel: '899991',
+            subchannel: '1',
+            expiry: 0,
+            date: 131007203230000000,
+            content: {
+                '@class': ''
             }
-        }
+        };
 
-        return msg;
+        var message = {
+            body: JSON.stringify(customProperties),
+            customProperties: customProperties
+        };
+        
+        
+        return message;
     }
     
     generateConnectionRequest(userId:string): any{

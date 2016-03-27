@@ -87,9 +87,6 @@ console.log(connMsg);
 u.on('Event', function () {
     managers.commsManager.commsWorker.receiveSubscriptionMessage();
     connMsg.id = Guid.raw();
-    managers.commsManager.commsWorker.sendTopicMessage(connMsg, function (error, result) {
-        console.log(error);
-        console.log(result);
-    });
+    managers.commsManager.commsWorker.sendTopicMessage(connMsg, true);
 });
 module.exports = app;
