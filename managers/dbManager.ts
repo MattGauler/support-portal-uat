@@ -19,10 +19,10 @@ export class DbManager {
         this.dbName = 'ArrowSupportServiceDev';
         this.encrypt = true;
 */
-        this.username = 'ct';
-        this.password = 'ArrowXLDb123';
-        this.server = 'hfayniug8w.database.windows.net';
-        this.dbName = 'ArrowSupportServiceDev';
+        this.username = 'supportadmin';
+        this.password = 'CTmD351gn';
+        this.server = 'support-uat-db.database.windows.net';
+        this.dbName = 'support-uat-db';
         this.encrypt = true;
 
         this.config = this.generateTediousConfig();
