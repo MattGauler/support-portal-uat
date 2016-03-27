@@ -7,6 +7,7 @@ var favicon = require('serve-favicon');
 var logger = require('morgan');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
+var Guid = require('guid');
 var azure = require('azure');
 var Connection = require('tedious').Connection;
 var Request = require('tedious').Request;
@@ -85,6 +86,7 @@ console.log('Timer initialised');
 console.log(connMsg);
 u.on('Event', function () {
     managers.commsManager.commsWorker.receiveSubscriptionMessage();
+    connMsg.id = Guid.raw();
     managers.commsManager.commsWorker.sendTopicMessage(connMsg, function (error, result) {
         console.log(error);
         console.log(result);
