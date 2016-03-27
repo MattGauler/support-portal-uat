@@ -19,7 +19,6 @@
     "tedious": "*",
     "guid": "*",
     "cors": "*",
-    "bcrypt": "*",
-    "node-uuid": "*"
+    "bcrypt": "*"
   }
 }

@@ -7,7 +7,6 @@ var favicon = require('serve-favicon');
 var logger = require('morgan');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
-var guid = require('node-uuid');
 var azure = require('azure');
 var Connection = require('tedious').Connection;
 var Request = require('tedious').Request;
@@ -78,12 +77,17 @@ app.use(function (err, req, res, next) {
 });
 // CREATE APPLICATION MANAGERS
 var managers = new Managers.Managers();
+var connMsg = managers.msgManager.generateConnectionRequest('support');
 var Updater = require('./updater/updater');
 var u = new Updater(1000);
 u.init();
 console.log('Timer initialised');
+console.log(connMsg);
 u.on('Event', function () {
     managers.commsManager.commsWorker.receiveSubscriptionMessage();
-    managers.commsManager.commsWorker.sendTopicMessage(connMsg);
+    managers.commsManager.commsWorker.sendTopicMessage(connMsg, function (error, result) {
+        console.log(error);
+        console.log(result);
+    });
 });
 module.exports = app;
