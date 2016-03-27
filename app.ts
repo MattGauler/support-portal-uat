@@ -92,17 +92,23 @@ app.use(function(err, req, res, next) {
 
 // CREATE APPLICATION MANAGERS
 var managers = new Managers.Managers();
-var connMsg = managers.msgManager.generateConnectionRequest('support');
+var subToken = process.env.SUBTOKEN || '0-SUPPORT';
+var driverId = process.env.DRIVERID || 'SUPPORT';
+
+//subToken = '0-14664-2a1fdb8f-956c-d7c8-c7fe-7ce28c3fd26b';
+//driverId = '53224eb8-ce59-42a8-9391-e35d7a5b9eb5';
+
+
+var connMsg = {};
 var Updater = require('./updater/updater');
 
 var u = new Updater(1000);
 u.init();
 console.log('Timer initialised');
-console.log(connMsg);
 u.on('Event',function () {
    managers.commsManager.commsWorker.receiveSubscriptionMessage();
-   connMsg.id = Guid.raw();
-   managers.commsManager.commsWorker.sendTopicMessage(connMsg,true);
+   connMsg = managers.msgManager.generateConnectionRequest(subToken,driverId);
+   managers.commsManager.commsWorker.sendTopicMessage(connMsg, false);
 });
 
 module.exports = app;

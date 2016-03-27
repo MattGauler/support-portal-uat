@@ -8,8 +8,7 @@ export class MsgManager {
     
     
     constructor() {
-        this.baseMsg = this.generateBaseMessage();
-        
+        this.baseMsg = this.generateBaseMessage();   
     }
     
     generateBaseMessage(): any {
@@ -53,23 +52,27 @@ export class MsgManager {
         return message;
     }
     
-    generateConnectionRequest(userId:string): any{
+    generateConnectionRequest(subToken:string,driverId:string): any{
         var base = this.generateBaseMessage();
-        var msg = base;
+        var customProperties = base;
         var content = {
-            content: {
-                "@class": "ConnectivityRequest", 
-                data: {
-                    "requestExpiry": moment().add(1,'m').valueOf()
-                }, 
-                driverId: "", 
-                id: Guid.raw(), 
-                messageDate: moment().toDate(), 
-                subscriptionToken: "5-20501-6a996228-d73b-1add-baad-8c04bf8cbccb"
-            }
+            "@class": "ConnectivityRequest", 
+            data: {
+                "requestExpiry": moment().add(1,'m').valueOf()
+            }, 
+            driverId: driverId, 
+            id: Guid.raw(), 
+            messageDate: moment().toDate(), 
+            subscriptionToken: subToken
         }
-        msg.content = content;
-        return msg;
+        customProperties.content = content;
+        
+        var message = {
+            body: JSON.stringify(customProperties),
+            customProperties: customProperties
+        };
+
+        return message;
     }
     
 }

@@ -5,11 +5,9 @@ var ServiceBusManager = (function () {
     function ServiceBusManager() {
         this.azure = require('azure');
         this.endPoint = process.env.ServiceBusConnectionString || 'Endpoint=sb://prod-ct-al-driverapp.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=74Yd6uoPrvVH+MdkF/HeamK5vNjrDtht2M9W3bU0uqg=';
-        this.topicName = process.env.ServiceBusReceiveTopicName || 't-support';
-        this.queueName = process.env.ServiceBusReceiveQueueName || 'supportuat';
-        this.subscriptionName = process.env.ServiceBusReceiveSubName || 'support-server';
+        this.topicName = process.env.ServiceBusReceiveTopicName || 't-notifydriver-1-0';
+        this.subscriptionName = process.env.ServiceBusReceiveSubName || '0-SUPPORT';
         this.serviceBusService = this.azure.createServiceBusService(this.endPoint);
-        this.createQueue();
         this.createTopic();
     }
     ServiceBusManager.prototype.createQueue = function () {
@@ -55,16 +53,18 @@ var ServiceBusManager = (function () {
         if (!err) {
             this.serviceBusService.sendTopicMessage(message.customProperties.channel, message, function (error) {
                 if (!error) {
-                    console.log('Message sent: %s', JSON.stringify(message));
+                    console.log('Message sent: %s', message.customProperties.id);
                 }
                 else {
                     console.log('SEND ERROR: %s', error);
+                    console.log(message);
                 }
             });
         }
-        else
+        else {
+            console.log('ERROR in sendTopicMessage: %s', err);
             console.log(message);
-        console.log('ERROR CREATING QUEUE: %s', err);
+        }
     };
     ServiceBusManager.prototype.receiveQueueMessage = function () {
         var _this = this;
@@ -72,14 +72,15 @@ var ServiceBusManager = (function () {
     };
     ServiceBusManager.prototype.receiveSubscriptionMessage = function () {
         var _this = this;
-        this.serviceBusService.receiveSubscriptionMessage(this.topicName, this.subscriptionName, { isPeekLock: true }, function (error, receivedMessage) { return _this.routeMessage(error, receivedMessage); });
+        this.serviceBusService.receiveSubscriptionMessage(this.topicName, this.subscriptionName, { isPeekLock: false }, function (error, receivedMessage) { return _this.routeMessage(error, receivedMessage); });
     };
     ServiceBusManager.prototype.routeMessage = function (error, receivedMessage) {
         if (!error && receivedMessage !== null) {
-            console.log(JSON.stringify(receivedMessage));
+            //console.log(JSON.stringify(receivedMessage));
             receivedMessage.body = JSON.parse(receivedMessage.body);
-            console.log('Message Action: %s', receivedMessage.body.notification);
-            switch (receivedMessage.body.notification) {
+            console.log('Message ID: %s', receivedMessage.body.id);
+            console.log('Message in reply to: %s', receivedMessage.body.content['reply-to-id']);
+            switch (receivedMessage.body.content['@class']) {
                 case 'register':
                     this.dbManager.connectToDb(receivedMessage.body.content);
                     break;
@@ -93,6 +94,9 @@ var ServiceBusManager = (function () {
                     this.dbManager.connectToDb(receivedMessage.body.content);
                     break;
                 case 'logout':
+                    this.dbManager.connectToDb(receivedMessage.body.content);
+                    break;
+                case 'ConnectivityResponse':
                     this.dbManager.connectToDb(receivedMessage.body.content);
                     break;
             }

@@ -15,12 +15,11 @@ export class ServiceBusManager implements Comms {
     constructor() {
         this.azure = require('azure');
         this.endPoint = process.env.ServiceBusConnectionString || 'Endpoint=sb://prod-ct-al-driverapp.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=74Yd6uoPrvVH+MdkF/HeamK5vNjrDtht2M9W3bU0uqg=';
-        this.topicName = process.env.ServiceBusReceiveTopicName || 't-support';
-        this.queueName = process.env.ServiceBusReceiveQueueName || 'supportuat';
-        this.subscriptionName = process.env.ServiceBusReceiveSubName || 'support-server';
+        this.topicName = process.env.ServiceBusReceiveTopicName || 't-notifydriver-1-0';
+        this.subscriptionName = process.env.ServiceBusReceiveSubName || '0-SUPPORT';
+        
         this.serviceBusService = this.azure.createServiceBusService(this.endPoint);
         
-        this.createQueue();
         this.createTopic();
     }
 
@@ -66,20 +65,23 @@ export class ServiceBusManager implements Comms {
             console.log('ERROR CREATING QUEUE: %s', err);
     }
 
-    sendTopicMessage(message, err): void {
+    sendTopicMessage(message,  err): void {
+        
         if(!err) {
             this.serviceBusService.sendTopicMessage(message.customProperties.channel, message, function(error){
                 if(!error){
-                    console.log('Message sent: %s', JSON.stringify(message));
+                    console.log('Message sent: %s', message.customProperties.id);
                 }
                 else {
                     console.log('SEND ERROR: %s', error);
+                    console.log(message);
                 }
             });
         }
-        else
+        else{
+            console.log('ERROR in sendTopicMessage: %s', err);
             console.log(message);
-            console.log('ERROR CREATING QUEUE: %s', err);
+        }
     }
 
     receiveQueueMessage(): void {
@@ -87,16 +89,17 @@ export class ServiceBusManager implements Comms {
     }
 
     receiveSubscriptionMessage(): void {
-        this.serviceBusService.receiveSubscriptionMessage(this.topicName, this.subscriptionName, {isPeekLock: true}, (error, receivedMessage) => this.routeMessage(error, receivedMessage));
+        this.serviceBusService.receiveSubscriptionMessage(this.topicName, this.subscriptionName, {isPeekLock: false}, (error, receivedMessage) => this.routeMessage(error, receivedMessage));
     }
 
     routeMessage(error, receivedMessage): void {
         if(!error && receivedMessage !== null) {
-            console.log(JSON.stringify(receivedMessage));
+            //console.log(JSON.stringify(receivedMessage));
             receivedMessage.body = JSON.parse(receivedMessage.body);
-            console.log('Message Action: %s', receivedMessage.body.notification);
+            console.log('Message ID: %s', receivedMessage.body.id);
+            console.log('Message in reply to: %s', receivedMessage.body.content['reply-to-id']);
 
-            switch(receivedMessage.body.notification) {
+            switch(receivedMessage.body.content['@class']) {
                 case 'register':
                     this.dbManager.connectToDb(receivedMessage.body.content);
                     break;
@@ -110,6 +113,9 @@ export class ServiceBusManager implements Comms {
                     this.dbManager.connectToDb(receivedMessage.body.content);
                     break;
                 case 'logout':
+                    this.dbManager.connectToDb(receivedMessage.body.content);
+                    break;
+                case 'ConnectivityResponse':
                     this.dbManager.connectToDb(receivedMessage.body.content);
                     break;
             }
