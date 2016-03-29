@@ -11,7 +11,7 @@ export class MsgManager {
         this.baseMsg = this.generateBaseMessage();   
     }
     
-    generateBaseMessage(): any {
+    generateBaseMessage(p_channel?:string): any {
         
         /*
         
@@ -36,9 +36,11 @@ export class MsgManager {
         }
         */
         
+        var channel = p_channel || 't-notifyshamrock-0';
+        
         var message = {
             id: Guid.raw(),
-            channel: 't-notifyshamrock-0',
+            channel: channel ,
             subchannel: '1234',
             expiry: moment().add(1,'m').valueOf(),
             date: moment().valueOf(),
@@ -75,4 +77,57 @@ export class MsgManager {
         return message;
     }
     
+    generateDeviceSupportRequest(channel:string, supportRequestData:any, supportRequestResponse:any): any{
+        var base = this.generateBaseMessage(channel);
+        var customProperties = base;
+        var content = {
+            "@class": "supportRequest", 
+            data: supportRequestData, 
+            response: supportRequestResponse,
+            id: Guid.raw(), 
+            messageDate: moment().toDate()
+        }
+        customProperties.content = content;
+        
+        var message = {
+            body: JSON.stringify(customProperties),
+            customProperties: customProperties
+        };
+
+        return message;
+    }
+    
+    generateServerSupportRequest(subToken:string,driverId:string,supportRequestData:any): any{
+        var base = this.generateBaseMessage();
+        var customProperties = base;
+        
+        /*
+        “@class”:”supportRequest”,
+        “data”:{
+            “action”:”cleardata”,
+            “source”:”localStorage”,
+            “dataitem”:”debugLevel”
+        },
+        “response”:{
+            “returnTopic”:”t-support”
+        }
+        */
+        
+        var content = {
+            "@class": "supportRequest", 
+            data: supportRequestData, 
+            driverId: driverId, 
+            id: Guid.raw(), 
+            messageDate: moment().toDate(), 
+            subscriptionToken: subToken
+        }
+        customProperties.content = content;
+        
+        var message = {
+            body: JSON.stringify(customProperties),
+            customProperties: customProperties
+        };
+
+        return message;
+    }
 }

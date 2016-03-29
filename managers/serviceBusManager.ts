@@ -67,10 +67,40 @@ export class ServiceBusManager implements Comms {
 
     sendTopicMessage(message,  err): void {
         
+        console.log('########################');
+        console.log(message);
+        console.log('########################');
+        
         if(!err) {
+            if(message.customProperties.content['@class']=='ConnectivityRequest'){
+                if(this.dbManager.connection == undefined){
+                    this.dbManager.connectToDb(message.customProperties);    
+                }
+                else{
+                    if(this.dbManager.connection.loggedIn && !this.dbManager.connection.closed){
+                        this.dbManager.registerConnectionRequest(message.customProperties);
+                    }
+                    else{
+                        this.dbManager.connectToDb(message.customProperties);    
+                    }
+                }
+            }
+            if(message.customProperties.content['@class']=='supportRequest'){
+                if(this.dbManager.connection == undefined){
+                    this.dbManager.connectToDb(message.customProperties);    
+                }
+                else{
+                    if(this.dbManager.connection.loggedIn && !this.dbManager.connection.closed){
+                        this.dbManager.registerSupportRequest(message.customProperties);
+                    }
+                    else{
+                        this.dbManager.connectToDb(message.customProperties);    
+                    }
+                }
+            }
             this.serviceBusService.sendTopicMessage(message.customProperties.channel, message, function(error){
                 if(!error){
-                    console.log('Message sent: %s', message.customProperties.id);
+                    //console.log('Message sent: %s', message.customProperties.id);
                 }
                 else {
                     console.log('SEND ERROR: %s', error);
@@ -94,10 +124,9 @@ export class ServiceBusManager implements Comms {
 
     routeMessage(error, receivedMessage): void {
         if(!error && receivedMessage !== null) {
-            //console.log(JSON.stringify(receivedMessage));
             receivedMessage.body = JSON.parse(receivedMessage.body);
-            console.log('Message ID: %s', receivedMessage.body.id);
-            console.log('Message in reply to: %s', receivedMessage.body.content['reply-to-id']);
+            //console.log('Message ID: %s', receivedMessage.body.id);
+            //console.log('Message in reply to: %s', receivedMessage.body.content['reply-to-id']);
 
             switch(receivedMessage.body.content['@class']) {
                 case 'register':
@@ -116,7 +145,12 @@ export class ServiceBusManager implements Comms {
                     this.dbManager.connectToDb(receivedMessage.body.content);
                     break;
                 case 'ConnectivityResponse':
-                    this.dbManager.connectToDb(receivedMessage.body.content);
+                    if(this.dbManager.connection.loggedIn && !this.dbManager.connection.closed){
+                        this.dbManager.registerConnectionResponse(receivedMessage.body);
+                    }
+                    else{
+                        this.dbManager.connectToDb(receivedMessage.body);    
+                    }
                     break;
             }
         }

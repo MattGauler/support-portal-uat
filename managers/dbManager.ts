@@ -42,17 +42,10 @@ export class DbManager {
         return config;
     }
 
-    connectedToDb(error: any, message: SupportMessageBody): void {
+    connectedToDb(error: any, message: any): void {
         if(!error) {
             console.log('Db Connected');
-
-            switch(message.type) {
-                case 'register':
-                    this.registerDeviceQuery(message);
-                    break;
-                case 'routeConfirm':
-                    this.confirmRouteQuery(message);
-                    break;
+            switch(message.content['@class']) {
                 case 'requestData':
                     this.requestResponseQuery(message);
                     break;
@@ -62,52 +55,86 @@ export class DbManager {
                 case 'logout':
                     this.deviceLogoutQuery(message);
                     break;
+                case 'supportRequest':
+                    this.registerSupportRequest(message);
+                    break;    
             }
         }
         else
             console.log('Db Connection Error: %s', error);
     }
 
-    connectToDb(message: SupportMessageBody): void {
+    connectToDb(message: any): void {
         console.log('Connecting to db...');
         this.connection = new this.tedious.Connection(this.config);
         this.connection.on('connect', (err => this.connectedToDb(err, message)));
         this.connection.on('end', function() { console.log('Db Disconnected') });
     }
 
-    registerDeviceQuery(message: SupportMessageBody) {
-        var request = new this.tedious.Request('dbo.UpdateConnectedDevices',
+    registerSupportRequest(message: any) {
+        console.log('REGISTERING REQUEST IN DB');
+        var request = new this.tedious.Request('dbo.createSupportRequest',
             (error, rowCount) => this.requestDone(error, rowCount)
         );
 
         var TYPES = this.tedious.TYPES;
 
-        request.addParameter('DeviceId', TYPES.NVarChar, message.deviceId);
-        request.addParameter('UserId', TYPES.NVarChar, message.userId);
-        request.addParameter('RouteId', TYPES.NVarChar, message.routeId);
-        request.addParameter('LastConnected', TYPES.DateTime, new Date(message.timeStamp));
+        var supportDestination = message.channel == 't-notifyshamrock-0' ? 'Server' : 'Device'; 
 
+        request.addParameter('MessageID', TYPES.NVarChar, message.id);
+        request.addParameter('RequestTo', TYPES.NVarChar, supportDestination);
+        request.addParameter('RequestSent', TYPES.DateTime, new Date(message.date));
+        request.addParameter('RequestMessage', TYPES.NVarChar, JSON.stringify(message));
+        
         this.connection.callProcedure(request);
     }
 
-    confirmRouteQuery(message: SupportMessageBody) {
-        var request = new this.tedious.Request(
-            `
-                INSERT INTO [dbo].[RouteConfirm] (DeviceId, UserId, RouteId, ConfirmTime)
-                VALUES (@DeviceId, @UserId, @RouteId, @ConfirmTime)
-
-            `,
+    registerConnectionRequest(message: any) {
+        
+        var request = new this.tedious.Request('dbo.createConnectionRequest',
             (error, rowCount) => this.requestDone(error, rowCount)
         );
 
         var TYPES = this.tedious.TYPES;
 
-        request.addParameter('DeviceId', TYPES.NVarChar, message.deviceId);
-        request.addParameter('UserId', TYPES.NVarChar, message.userId);
-        request.addParameter('RouteId', TYPES.NVarChar, message.routeId);
-        request.addParameter('ConfirmTime', TYPES.DateTime, new Date(message.timeStamp));
+        request.addParameter('MessageID', TYPES.NVarChar, message.id);
+        request.addParameter('RequestSent', TYPES.DateTime, new Date(message.date));
+        
+        this.connection.callProcedure(request);
+    }
 
-        this.connection.execSql(request);
+    registerConnectionResponse(message: any) {
+        
+        function retry() {
+            if(this.connection!=undefined){
+                console.log('Retrying....');
+                if(this.connection.state == 'LoggedIn'){
+                    clearInterval(tid);
+                    this.connection.callProcedure(request);
+                }
+            }
+        }
+        
+        var tid = undefined;
+        
+        var request = new this.tedious.Request('dbo.updateConnectionRequest',
+            (error, rowCount) => this.requestDone(error, rowCount)
+        );
+
+        var TYPES = this.tedious.TYPES;
+
+        request.addParameter('MessageID', TYPES.NVarChar, message.content['reply-to-id']);
+        request.addParameter('ResponseReceived', TYPES.DateTime, new Date(message.date));
+        //console.log('DB Connection State: ' + this.connection.state.name);
+        if(this.connection.state.name == 'LoggedIn'){
+            //console.log('Update DB....')
+            this.connection.callProcedure(request);
+        }
+        else{
+            console.log('DB Locked....');
+            console.log('DB Connection State: ' + this.connection.state.name);
+            tid = setInterval(retry, 100);
+        }
     }
 
     requestResponseQuery(message: SupportMessageBody) {
@@ -124,12 +151,12 @@ export class DbManager {
 
         var TYPES = this.tedious.TYPES;
 
-        request.addParameter('DeviceId', TYPES.NVarChar, message.deviceId);
-        request.addParameter('UserId', TYPES.NVarChar, message.userId);
-        request.addParameter('InstructionType', TYPES.NVarChar, message.type);
-        request.addParameter('InstructionValues', TYPES.NVarChar, JSON.stringify(message.result));
-        request.addParameter('RequestedTime', TYPES.DateTime, new Date());
-        request.addParameter('Requester', TYPES.NVarChar, message.requester);
+        //request.addParameter('DeviceId', TYPES.NVarChar, message.deviceId);
+        //request.addParameter('UserId', TYPES.NVarChar, message.userId);
+        //request.addParameter('InstructionType', TYPES.NVarChar, message.type);
+        //request.addParameter('InstructionValues', TYPES.NVarChar, JSON.stringify(message.result));
+        //request.addParameter('RequestedTime', TYPES.DateTime, new Date());
+        //request.addParameter('Requester', TYPES.NVarChar, message.requester);
 
         this.connection.execSql(request);
     }
@@ -140,12 +167,11 @@ export class DbManager {
     }
 
     requestDone(error, rowCount) {
-        if(error)
-            console.log(error);
-        else
-            console.log('Complete: %s row(s) returned', rowCount);
+        if(error) console.log(error);
+        //else
+            //console.log('Complete: %s row(s) returned', rowCount);
 
-        this.connection.close();
+        //this.connection.close();
     }
 
     deviceLogoutQuery(message: SupportMessageBody) {
@@ -160,8 +186,8 @@ export class DbManager {
         var TYPES = this.tedious.TYPES;
 
         request.addParameter('DeviceId', TYPES.NVarChar, message.deviceId);
-        request.addParameter('UserId', TYPES.NVarChar, message.userId);
-        request.addParameter('RouteId', TYPES.NVarChar, message.routeId);
+        //request.addParameter('UserId', TYPES.NVarChar, message.userId);
+        //request.addParameter('RouteId', TYPES.NVarChar, message.routeId);
 
         this.connection.execSql(request);
     }

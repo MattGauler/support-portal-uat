@@ -5,7 +5,7 @@ var MsgManager = (function () {
     function MsgManager() {
         this.baseMsg = this.generateBaseMessage();
     }
-    MsgManager.prototype.generateBaseMessage = function () {
+    MsgManager.prototype.generateBaseMessage = function (p_channel) {
         /*
         
         {
@@ -28,9 +28,10 @@ var MsgManager = (function () {
             }
         }
         */
+        var channel = p_channel || 't-notifyshamrock-0';
         var message = {
             id: Guid.raw(),
-            channel: 't-notifyshamrock-0',
+            channel: channel,
             subchannel: '1234',
             expiry: moment().add(1, 'm').valueOf(),
             date: moment().valueOf(),
@@ -50,6 +51,52 @@ var MsgManager = (function () {
             data: {
                 "requestExpiry": moment().add(1, 'm').valueOf()
             },
+            driverId: driverId,
+            id: Guid.raw(),
+            messageDate: moment().toDate(),
+            subscriptionToken: subToken
+        };
+        customProperties.content = content;
+        var message = {
+            body: JSON.stringify(customProperties),
+            customProperties: customProperties
+        };
+        return message;
+    };
+    MsgManager.prototype.generateDeviceSupportRequest = function (channel, supportRequestData, supportRequestResponse) {
+        var base = this.generateBaseMessage(channel);
+        var customProperties = base;
+        var content = {
+            "@class": "supportRequest",
+            data: supportRequestData,
+            response: supportRequestResponse,
+            id: Guid.raw(),
+            messageDate: moment().toDate()
+        };
+        customProperties.content = content;
+        var message = {
+            body: JSON.stringify(customProperties),
+            customProperties: customProperties
+        };
+        return message;
+    };
+    MsgManager.prototype.generateServerSupportRequest = function (subToken, driverId, supportRequestData) {
+        var base = this.generateBaseMessage();
+        var customProperties = base;
+        /*
+        “@class”:”supportRequest”,
+        “data”:{
+            “action”:”cleardata”,
+            “source”:”localStorage”,
+            “dataitem”:”debugLevel”
+        },
+        “response”:{
+            “returnTopic”:”t-support”
+        }
+        */
+        var content = {
+            "@class": "supportRequest",
+            data: supportRequestData,
             driverId: driverId,
             id: Guid.raw(),
             messageDate: moment().toDate(),

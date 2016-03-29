@@ -25,6 +25,12 @@ var receivedMessageTest = require('./routes/api/receivedMessageTest');
 var loginEvents = require('./routes/api/loginEvents');
 var routeEvents = require('./routes/api/routeEvents');
 var markPilot = require('./routes/api/markPilot');
+var connections = require('./routes/api/connections');
+var connectionSummary = require('./routes/api/connectionSummary');
+var deviceSupportRequest = require('./routes/api/deviceSupportRequest');
+var serverSupportRequest = require('./routes/api/serverSupportRequest');
+var connectivityDelayBands = require('./routes/api/connectivityDelayBands');
+var supportResponse = require('./routes/api/supportResponse');
 var app = express();
 app.use(cors());
 // view engine setup
@@ -49,6 +55,12 @@ app.use('/api/receivedMessageTest', receivedMessageTest);
 app.use('/api/loginEvents', loginEvents);
 app.use('/api/routeEvents', routeEvents);
 app.use('/api/markPilot', markPilot);
+app.use('/api/connections', connections);
+app.use('/api/connectionSummary', connectionSummary);
+app.use('/api/deviceSupportRequest', deviceSupportRequest);
+app.use('/api/serverSupportRequest', deviceSupportRequest);
+app.use('/api/connectivityDelayBands', connectivityDelayBands);
+app.use('/api/supportResponse', supportResponse);
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
     var err = new Error('Not Found');
@@ -84,7 +96,7 @@ var driverId = process.env.DRIVERID || 'SUPPORT';
 //driverId = '53224eb8-ce59-42a8-9391-e35d7a5b9eb5';
 var connMsg = {};
 var Updater = require('./updater/updater');
-var u = new Updater(1000);
+var u = new Updater(5000);
 u.init();
 console.log('Timer initialised');
 u.on('Event', function () {

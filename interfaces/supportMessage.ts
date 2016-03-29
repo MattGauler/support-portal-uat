@@ -24,11 +24,22 @@ interface SupportMessage {
     }
 }
 
+interface GenericMessageBody {
+    class: string;
+    id: string;
+    messageDate: Date;
+}
+
+interface ConnectivityMessageBody {
+    id: string;
+    code: number;
+    messageDate: string;
+}
 
 interface SupportMessageBody {
+    id: string;
     type: string;
-    userId: string;
-    routeId: string;
+    driverId: string;
     deviceId: string;
     timeStamp: string;
 
