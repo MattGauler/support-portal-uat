@@ -11,6 +11,7 @@ router.post('/', function (req, res, next) {
     var userId = req.body.userId;
     var apiKey = req.body.apiKey;
     var period = req.body.period;
+    period = 0 - parseInt(period);
     console.log('PARAMS: %s, %s, %s', userId, apiKey, period);
     var managers = new Managers.Managers();
     var connection = new Connection(managers.dbManager.generateTediousConfig());
@@ -33,7 +34,7 @@ router.post('/', function (req, res, next) {
             }
             else {
                 var result = [];
-                var request = new Request("\n                    Select\n                        delaybandId as ID,\n                        delayBandLabel as [Band],\n                        Count(*) as [Occurences]\n                    from\n                        responseDelayBands r left outer join vwConnectionResponses v on v.delay between r.delayBandMin and r.delayBandMax\n                    where v.request > dateadd(second,-" + period + ",getdate())\n                    group by delaybandid, delayBandLabel\n                    ", function (err, rowCount) {
+                var request = new Request("\n                    select rb.*, IsNull(sub.Occurences,0) as Occurences from\n                        (Select\n                            delaybandId as ID,\n                            delayBandLabel as [Band],\n                            Count(*) as [Occurences]\n                        from\n                            responseDelayBands r join vwConnectionResponses v on v.delay between r.delayBandMin and r.delayBandMax\n                        where v.request > dateadd(second,@period,getdate())\n                        group by delaybandid, delayBandLabel) sub right join dbo.ResponseDelayBands rb\n                        on sub.ID = rb.delayBandId\n                    ", function (err, rowCount) {
                     if (err) {
                         console.log(err);
                         res.status(500).send("Error");
@@ -61,6 +62,7 @@ router.post('/', function (req, res, next) {
                 request.on('done', function (rowCount, more) {
                     console.log(rowCount + ' rows returned');
                 });
+                request.addParameter('period', TYPES.Int, period);
                 connection.execSql(request);
             }
         });

@@ -43,7 +43,7 @@ var MsgManager = (function () {
         };
         return message;
     };
-    MsgManager.prototype.generateConnectionRequest = function (subToken, driverId) {
+    MsgManager.prototype.generateConnectionRequest = function (topic, subToken, driverId) {
         var base = this.generateBaseMessage();
         var customProperties = base;
         var content = {
@@ -57,52 +57,38 @@ var MsgManager = (function () {
             subscriptionToken: subToken
         };
         customProperties.content = content;
+        customProperties.topic = topic;
+        customProperties.channel = 'driverapp';
         var message = {
             body: JSON.stringify(customProperties),
             customProperties: customProperties
         };
         return message;
     };
-    MsgManager.prototype.generateDeviceSupportRequest = function (channel, supportRequestData, supportRequestResponse) {
-        var base = this.generateBaseMessage(channel);
+    MsgManager.prototype.generateDeviceSupportRequest = function (topic, subscription, supportMessageContent) {
+        var base = this.generateBaseMessage(topic);
         var customProperties = base;
-        var content = {
-            "@class": "supportRequest",
-            data: supportRequestData,
-            response: supportRequestResponse,
-            id: Guid.raw(),
-            messageDate: moment().toDate()
-        };
-        customProperties.content = content;
+        customProperties.content = supportMessageContent;
+        customProperties.content.id = Guid.raw();
+        customProperties.content.messageDate = moment().toDate();
+        customProperties.target = subscription;
+        customProperties.topic = topic;
+        customProperties.channel = 'driverapp';
         var message = {
             body: JSON.stringify(customProperties),
             customProperties: customProperties
         };
         return message;
     };
-    MsgManager.prototype.generateServerSupportRequest = function (subToken, driverId, supportRequestData) {
-        var base = this.generateBaseMessage();
+    MsgManager.prototype.generateServerSupportRequest = function (topic, subscription, supportMessageContent) {
+        var base = this.generateBaseMessage(topic);
         var customProperties = base;
-        /*
-        “@class”:”supportRequest”,
-        “data”:{
-            “action”:”cleardata”,
-            “source”:”localStorage”,
-            “dataitem”:”debugLevel”
-        },
-        “response”:{
-            “returnTopic”:”t-support”
-        }
-        */
-        var content = {
-            "@class": "supportRequest",
-            data: supportRequestData,
-            driverId: driverId,
-            id: Guid.raw(),
-            messageDate: moment().toDate(),
-            subscriptionToken: subToken
-        };
-        customProperties.content = content;
+        customProperties.content = supportMessageContent;
+        customProperties.content.id = Guid.raw();
+        customProperties.content.messageDate = moment().toDate();
+        customProperties.target = subscription;
+        customProperties.topic = topic;
+        customProperties.channel = topic;
         var message = {
             body: JSON.stringify(customProperties),
             customProperties: customProperties

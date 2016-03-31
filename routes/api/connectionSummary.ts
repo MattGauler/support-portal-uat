@@ -13,6 +13,8 @@ router.post('/', function(req, res, next) {
     var userId = req.body.userId;
     var apiKey = req.body.apiKey;
     var period = req.body.period;
+    period = 0 - parseInt(period);
+    
     console.log('PARAMS: %s, %s, %s', userId, apiKey, period);
 
     var managers = new Managers.Managers();
@@ -43,14 +45,16 @@ router.post('/', function(req, res, next) {
 
                 var request = new Request(
                     `
-                    Select
-                        delaybandId as ID,
-                        delayBandLabel as [Band],
-                        Count(*) as [Occurences]
-                    from
-                        responseDelayBands r left outer join vwConnectionResponses v on v.delay between r.delayBandMin and r.delayBandMax
-                    where v.request > dateadd(second,-` + period + `,getdate())
-                    group by delaybandid, delayBandLabel
+                    select rb.*, IsNull(sub.Occurences,0) as Occurences from
+                        (Select
+                            delaybandId as ID,
+                            delayBandLabel as [Band],
+                            Count(*) as [Occurences]
+                        from
+                            responseDelayBands r join vwConnectionResponses v on v.delay between r.delayBandMin and r.delayBandMax
+                        where v.request > dateadd(second,@period,getdate())
+                        group by delaybandid, delayBandLabel) sub right join dbo.ResponseDelayBands rb
+                        on sub.ID = rb.delayBandId
                     `,
                     function(err, rowCount) {
                         if (err) {
@@ -84,7 +88,9 @@ router.post('/', function(req, res, next) {
                 request.on('done', function(rowCount, more) {
                     console.log(rowCount + ' rows returned');
                 });
-
+                
+                request.addParameter('period', TYPES.Int, period);
+                
                 connection.execSql(request);
             }
         });

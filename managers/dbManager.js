@@ -44,6 +44,12 @@ var DbManager = (function () {
                 case 'supportRequest':
                     this.registerSupportRequest(message);
                     break;
+                case 'ConnectivityRequest':
+                    this.registerConnectionRequest(message);
+                    break;
+                case 'ConnectivityResponse':
+                    this.registerConnectionResponse(message);
+                    break;
             }
         }
         else
@@ -124,7 +130,7 @@ var DbManager = (function () {
             console.log(error);
         //else
         //console.log('Complete: %s row(s) returned', rowCount);
-        //this.connection.close();
+        this.connection.close();
     };
     DbManager.prototype.deviceLogoutQuery = function (message) {
         var _this = this;

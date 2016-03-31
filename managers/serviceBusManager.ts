@@ -6,6 +6,7 @@ import DbManager = require('../managers/dbManager');
 export class ServiceBusManager implements Comms {
     azure: any;
     serviceBusService: any;
+    serverTopic: string;
     queueName: string;
     topicName: string;
     subscriptionName: string;
@@ -15,6 +16,10 @@ export class ServiceBusManager implements Comms {
     constructor() {
         this.azure = require('azure');
         this.endPoint = process.env.ServiceBusConnectionString || 'Endpoint=sb://prod-ct-al-driverapp.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=74Yd6uoPrvVH+MdkF/HeamK5vNjrDtht2M9W3bU0uqg=';
+        //this.endPoint = process.env.ServiceBusConnectionString || 'Endpoint=sb://sit-ct-al-driverapp.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=0dgyeLLvDmGOTEJ+zDZGJT9huuOYgJfEZ/si7IWvjYI=';
+        
+        this.serverTopic = process.env.ServiceBusSendTopicName ||  't-notifyshamrock-0';
+        
         this.topicName = process.env.ServiceBusReceiveTopicName || 't-notifydriver-1-0';
         this.subscriptionName = process.env.ServiceBusReceiveSubName || '0-SUPPORT';
         
@@ -65,14 +70,16 @@ export class ServiceBusManager implements Comms {
             console.log('ERROR CREATING QUEUE: %s', err);
     }
 
-    sendTopicMessage(message,  err): void {
+    sendTopicMessage(callback, message,  err): void {
         
-        console.log('########################');
-        console.log(message);
-        console.log('########################');
+        //console.log('########################');
+        //console.log(message);
+        //console.log('########################');
+        var targetTopic = this.serverTopic;
         
         if(!err) {
             if(message.customProperties.content['@class']=='ConnectivityRequest'){
+                targetTopic = this.serverTopic;
                 if(this.dbManager.connection == undefined){
                     this.dbManager.connectToDb(message.customProperties);    
                 }
@@ -86,6 +93,7 @@ export class ServiceBusManager implements Comms {
                 }
             }
             if(message.customProperties.content['@class']=='supportRequest'){
+                targetTopic = message.customProperties.topic;
                 if(this.dbManager.connection == undefined){
                     this.dbManager.connectToDb(message.customProperties);    
                 }
@@ -98,19 +106,25 @@ export class ServiceBusManager implements Comms {
                     }
                 }
             }
-            this.serviceBusService.sendTopicMessage(message.customProperties.channel, message, function(error){
+            this.serviceBusService.sendTopicMessage(targetTopic, message, function(error){
                 if(!error){
-                    //console.log('Message sent: %s', message.customProperties.id);
+                    var result = ('MessageID: %s sent to Topic %s', message.customProperties.id, targetTopic);
+                    console.log(result);
+                    callback(result);
                 }
                 else {
-                    console.log('SEND ERROR: %s', error);
+                    var errorMsg = ('Error sending MessageID: %s to Topic %s: ERROR - ', message.customProperties.id, targetTopic, error);
+                    console.log('SEND ERROR: %s', errorMsg);
                     console.log(message);
+                    callback(errorMsg);
                 }
             });
         }
         else{
-            console.log('ERROR in sendTopicMessage: %s', err);
+            var errorMsg = 'ERROR in sendTopicMessage: %s', err;
+            console.log(errorMsg);
             console.log(message);
+            callback(errorMsg);
         }
     }
 
@@ -125,8 +139,8 @@ export class ServiceBusManager implements Comms {
     routeMessage(error, receivedMessage): void {
         if(!error && receivedMessage !== null) {
             receivedMessage.body = JSON.parse(receivedMessage.body);
-            //console.log('Message ID: %s', receivedMessage.body.id);
-            //console.log('Message in reply to: %s', receivedMessage.body.content['reply-to-id']);
+            console.log('Message ID: %s', receivedMessage.body.id);
+            console.log('Message in reply to: %s', receivedMessage.body.content['reply-to-id']);
 
             switch(receivedMessage.body.content['@class']) {
                 case 'register':

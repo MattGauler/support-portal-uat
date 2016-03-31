@@ -54,7 +54,7 @@ export class MsgManager {
         return message;
     }
     
-    generateConnectionRequest(subToken:string,driverId:string): any{
+    generateConnectionRequest(topic:string, subToken:string,driverId:string): any{
         var base = this.generateBaseMessage();
         var customProperties = base;
         var content = {
@@ -68,6 +68,8 @@ export class MsgManager {
             subscriptionToken: subToken
         }
         customProperties.content = content;
+        customProperties.topic = topic;
+        customProperties.channel = 'driverapp';
         
         var message = {
             body: JSON.stringify(customProperties),
@@ -77,17 +79,16 @@ export class MsgManager {
         return message;
     }
     
-    generateDeviceSupportRequest(channel:string, supportRequestData:any, supportRequestResponse:any): any{
-        var base = this.generateBaseMessage(channel);
+    generateDeviceSupportRequest(topic:string, subscription:string, supportMessageContent:any): any{
+        var base = this.generateBaseMessage(topic);
         var customProperties = base;
-        var content = {
-            "@class": "supportRequest", 
-            data: supportRequestData, 
-            response: supportRequestResponse,
-            id: Guid.raw(), 
-            messageDate: moment().toDate()
-        }
-        customProperties.content = content;
+        customProperties.content = supportMessageContent;
+        customProperties.content.id = Guid.raw();
+        customProperties.content.messageDate = moment().toDate();
+        
+        customProperties.target = subscription;
+        customProperties.topic = topic;
+        customProperties.channel = 'driverapp';
         
         var message = {
             body: JSON.stringify(customProperties),
@@ -97,31 +98,17 @@ export class MsgManager {
         return message;
     }
     
-    generateServerSupportRequest(subToken:string,driverId:string,supportRequestData:any): any{
-        var base = this.generateBaseMessage();
+    generateServerSupportRequest(topic:string, subscription:string,supportMessageContent:any): any{
+        var base = this.generateBaseMessage(topic);
         var customProperties = base;
         
-        /*
-        “@class”:”supportRequest”,
-        “data”:{
-            “action”:”cleardata”,
-            “source”:”localStorage”,
-            “dataitem”:”debugLevel”
-        },
-        “response”:{
-            “returnTopic”:”t-support”
-        }
-        */
-        
-        var content = {
-            "@class": "supportRequest", 
-            data: supportRequestData, 
-            driverId: driverId, 
-            id: Guid.raw(), 
-            messageDate: moment().toDate(), 
-            subscriptionToken: subToken
-        }
-        customProperties.content = content;
+        customProperties.content = supportMessageContent;
+        customProperties.content.id = Guid.raw();
+        customProperties.content.messageDate = moment().toDate();
+       
+        customProperties.target = subscription;
+        customProperties.topic = topic;
+        customProperties.channel = topic;
         
         var message = {
             body: JSON.stringify(customProperties),

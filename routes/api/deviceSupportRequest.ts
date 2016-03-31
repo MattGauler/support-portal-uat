@@ -11,21 +11,26 @@ var TYPES = require('tedious').TYPES;
 
 router.post('/', function(req, res, next) {
     
-    var requestMessage = req.body.requestMessage;
-    var targetDeviceChannel = req.body.targetDevice;
-    var requestMessageId = requestMessage.id;
-    var requestTimestamp = new Date(requestMessage.date);
-    
-    var reqData = requestMessage.content.data;
-    var reqResponse = requestMessage.content.response;
-    
-    console.log('PARAMS: %s, %s', requestMessageId, requestTimestamp);
+var requestMessage = req.body.requestMessage;
+
+var targetTopic = req.body.topic;
+    var targetSubscription = req.body.target;
+    var requestMessageContent = req.body.requestMessageContent;
     
     var managers = new Managers.Managers();
     
-    var supportRequestMessage = managers.msgManager.generateDeviceSupportRequest(targetDeviceChannel,reqData,reqResponse);
+    var supportRequestMessage = managers.msgManager.generateDeviceSupportRequest(targetTopic,targetSubscription,requestMessageContent);
     
-    managers.commsManager.commsWorker.sendTopicMessage(supportRequestMessage, false);
+    var requestMessageId = supportRequestMessage.customProperties.content.id;
+    var requestTimestamp = new Date(supportRequestMessage.customProperties.content.messageDate);
+     
+    console.log('PARAMS: %s, %s', requestMessageId, requestTimestamp);
+    
+    managers.commsManager.commsWorker.sendTopicMessage(function(result){
+        res.setHeader('content-type', 'application/x-www-form-urlencoded');
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.status(200).send(result);   
+    },supportRequestMessage, false);
 
 });
 

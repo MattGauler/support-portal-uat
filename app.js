@@ -58,7 +58,7 @@ app.use('/api/markPilot', markPilot);
 app.use('/api/connections', connections);
 app.use('/api/connectionSummary', connectionSummary);
 app.use('/api/deviceSupportRequest', deviceSupportRequest);
-app.use('/api/serverSupportRequest', deviceSupportRequest);
+app.use('/api/serverSupportRequest', serverSupportRequest);
 app.use('/api/connectivityDelayBands', connectivityDelayBands);
 app.use('/api/supportResponse', supportResponse);
 // catch 404 and forward to error handler
@@ -96,12 +96,14 @@ var driverId = process.env.DRIVERID || 'SUPPORT';
 //driverId = '53224eb8-ce59-42a8-9391-e35d7a5b9eb5';
 var connMsg = {};
 var Updater = require('./updater/updater');
-var u = new Updater(5000);
+var u = new Updater(6000);
 u.init();
 console.log('Timer initialised');
 u.on('Event', function () {
     managers.commsManager.commsWorker.receiveSubscriptionMessage();
     connMsg = managers.msgManager.generateConnectionRequest(subToken, driverId);
-    managers.commsManager.commsWorker.sendTopicMessage(connMsg, false);
+    managers.commsManager.commsWorker.sendTopicMessage(function (result) {
+        console.log(result);
+    }, connMsg, false);
 });
 module.exports = app;

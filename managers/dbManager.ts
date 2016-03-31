@@ -57,7 +57,13 @@ export class DbManager {
                     break;
                 case 'supportRequest':
                     this.registerSupportRequest(message);
-                    break;    
+                    break;
+                case 'ConnectivityRequest':
+                    this.registerConnectionRequest(message);
+                    break;   
+                case 'ConnectivityResponse':
+                    this.registerConnectionResponse(message);
+                    break; 
             }
         }
         else
@@ -171,7 +177,7 @@ export class DbManager {
         //else
             //console.log('Complete: %s row(s) returned', rowCount);
 
-        //this.connection.close();
+        this.connection.close();
     }
 
     deviceLogoutQuery(message: SupportMessageBody) {

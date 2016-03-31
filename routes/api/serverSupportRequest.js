@@ -8,20 +8,18 @@ var Connection = require('tedious').Connection;
 var Request = require('tedious').Request;
 var TYPES = require('tedious').TYPES;
 router.post('/', function (req, res, next) {
-    var requestMessage = req.body.requestMessage;
-    var requestMessageId = requestMessage.id;
-    var requestTimestamp = new Date(requestMessage.date);
-    console.log('PARAMS: %s, %s, %s', requestMessageId, requestTimestamp, requestMessage);
+    var targetTopic = req.body.topic;
+    var targetSubscription = req.body.target;
+    var requestMessageContent = req.body.requestMessageContent;
     var managers = new Managers.Managers();
-    var supportRequest = req.body;
-    var subToken = '';
-    var driverId = '';
-    var reqData = {};
-    var requestMessage = managers.msgManager.generateServerSupportRequest(subToken, driverId, reqData);
-    var message = {
-        body: JSON.stringify(requestMessage),
-        customProperties: requestMessage
-    };
-    managers.commsManager.commsWorker.sendTopicMessage(message, false);
+    var supportRequestMessage = managers.msgManager.generateServerSupportRequest(targetTopic, targetSubscription, requestMessageContent);
+    var requestMessageId = supportRequestMessage.customProperties.content.id;
+    var requestTimestamp = new Date(supportRequestMessage.customProperties.content.messageDate);
+    console.log('PARAMS: %s, %s', requestMessageId, requestTimestamp);
+    managers.commsManager.commsWorker.sendTopicMessage(function (result) {
+        res.setHeader('content-type', 'application/x-www-form-urlencoded');
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.status(200).send(result);
+    }, supportRequestMessage, false);
 });
 module.exports = router;
