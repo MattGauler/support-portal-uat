@@ -59,6 +59,7 @@ router.post('/', function (req, res, next) {
                     });
                     result.push(row);
                 });
+                //TEST
                 request.on('done', function (rowCount, more) {
                     console.log(rowCount + ' rows returned');
                 });
