@@ -10,6 +10,7 @@ var bodyParser = require('body-parser');
 var Guid = require('guid');
 var azure = require('azure');
 var Connection = require('tedious').Connection;
+var ConnectionPool = require('tedious-connection-pool').Connection;
 var Request = require('tedious').Request;
 var TYPES = require('tedious').TYPES;
 var routes = require('./routes/index');
@@ -20,6 +21,7 @@ var createUser = require('./routes/api/createUser');
 var instruction = require('./routes/api/instruction');
 var instructionResponse = require('./routes/api/instructionResponse');
 var connectedDevices = require('./routes/api/connectedDevices');
+var connectedDrivers = require('./routes/api/connectedDrivers');
 var sendMessageTest = require('./routes/api/sendMessageTest');
 var receivedMessageTest = require('./routes/api/receivedMessageTest');
 var loginEvents = require('./routes/api/loginEvents');
@@ -31,6 +33,7 @@ var deviceSupportRequest = require('./routes/api/deviceSupportRequest');
 var serverSupportRequest = require('./routes/api/serverSupportRequest');
 var connectivityDelayBands = require('./routes/api/connectivityDelayBands');
 var supportResponse = require('./routes/api/supportResponse');
+var driverState = require('./routes/api/driverState');
 var app = express();
 app.use(cors());
 // view engine setup
@@ -50,6 +53,7 @@ app.use('/api/createUser', createUser);
 app.use('/api/instruction', instruction);
 app.use('/api/instructionResponse', instructionResponse);
 app.use('/api/connectedDevices', connectedDevices);
+app.use('/api/connectedDrivers', connectedDrivers);
 app.use('/api/sendMessageTest', sendMessageTest);
 app.use('/api/receivedMessageTest', receivedMessageTest);
 app.use('/api/loginEvents', loginEvents);
@@ -61,6 +65,7 @@ app.use('/api/deviceSupportRequest', deviceSupportRequest);
 app.use('/api/serverSupportRequest', serverSupportRequest);
 app.use('/api/connectivityDelayBands', connectivityDelayBands);
 app.use('/api/supportResponse', supportResponse);
+app.use('/api/driverState', driverState);
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
     var err = new Error('Not Found');
@@ -97,14 +102,19 @@ var serverTopic = process.env.ServiceBusSendTopicName || 't-notifyshamrock-0';
 //driverId = '53224eb8-ce59-42a8-9391-e35d7a5b9eb5';
 var connMsg = {};
 var Updater = require('./updater/updater');
-var u = new Updater(6000);
+var u = new Updater(30000);
 u.init();
 console.log('Timer initialised');
 u.on('Event', function () {
-    managers.commsManager.commsWorker.receiveSubscriptionMessage();
     connMsg = managers.msgManager.generateConnectionRequest(serverTopic, subToken, driverId);
     managers.commsManager.commsWorker.sendTopicMessage(function (result) {
         console.log(result);
     }, connMsg, false);
+});
+var uReader = new Updater(5000);
+uReader.init();
+console.log('Reader Timer initialised');
+uReader.on('Event', function () {
+    managers.commsManager.commsWorker.receiveSubscriptionMessage();
 });
 module.exports = app;

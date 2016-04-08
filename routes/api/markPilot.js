@@ -27,7 +27,7 @@ router.post('/', function (req, res) {
         }
     });
     function executeStatement(res, deviceId, pilotValue) {
-        managers.dbManager.allowRequest(connection, userId, apiKey, function (authorised) {
+        managers.dbManager.allowRequest(userId, apiKey, function (authorised) {
             if (!authorised) {
                 res.status(500).send();
             }

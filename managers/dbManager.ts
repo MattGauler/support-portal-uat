@@ -1,6 +1,6 @@
 export class DbManager {
+    
     tedious: any;
-
     connectionString: string;
     username: string;
     password: string;
@@ -9,16 +9,17 @@ export class DbManager {
     encrypt: Boolean;
     config: any;
     connection: any;
+    connectionPool: any;
+    poolConfig: any;
+    pool: any;
+    result: Array<any>;
 
+    
     constructor() {
+        
         this.tedious = require('tedious');
-/*
-        this.username = 'ct';
-        this.password = 'ArrowXLDb123';
-        this.server = 'hfayniug8w.database.windows.net';
-        this.dbName = 'ArrowSupportServiceDev';
-        this.encrypt = true;
-*/
+        this.connectionPool = require('tedious-connection-pool');
+        
         this.username = 'supportadmin';
         this.password = 'CTmD351gn';
         this.server = 'support-uat-db.database.windows.net';
@@ -26,6 +27,21 @@ export class DbManager {
         this.encrypt = true;
 
         this.config = this.generateTediousConfig();
+        
+        this.result = [];
+        
+        this.poolConfig = {
+            min: 1,
+            max: 1,
+            log: true
+        };
+
+        //create the pool
+        this.pool = new this.connectionPool(this.poolConfig, this.config);
+        this.pool.on('error', function(err) {
+            console.error(err);
+        });
+        console.log('DBManager connected');
     }
 
     generateTediousConfig(): any {
@@ -40,171 +56,112 @@ export class DbManager {
         }
 
         return config;
-    }
-
-    connectedToDb(error: any, message: any): void {
-        if(!error) {
-            console.log('Db Connected');
-            switch(message.content['@class']) {
-                case 'requestData':
-                    this.requestResponseQuery(message);
-                    break;
-                case 'resendMessages':
-                    this.requestResponseQuery(message);
-                    break;
-                case 'logout':
-                    this.deviceLogoutQuery(message);
-                    break;
-                case 'supportRequest':
-                    this.registerSupportRequest(message);
-                    break;
-                case 'ConnectivityRequest':
-                    this.registerConnectionRequest(message);
-                    break;   
-                case 'ConnectivityResponse':
-                    this.registerConnectionResponse(message);
-                    break; 
-            }
-        }
-        else
-            console.log('Db Connection Error: %s', error);
-    }
-
-    connectToDb(message: any): void {
-        console.log('Connecting to db...');
-        this.connection = new this.tedious.Connection(this.config);
-        this.connection.on('connect', (err => this.connectedToDb(err, message)));
-        this.connection.on('end', function() { console.log('Db Disconnected') });
-    }
+    };
 
     registerSupportRequest(message: any) {
-        console.log('REGISTERING REQUEST IN DB');
-        var request = new this.tedious.Request('dbo.createSupportRequest',
-            (error, rowCount) => this.requestDone(error, rowCount)
-        );
-
-        var TYPES = this.tedious.TYPES;
-
-        var supportDestination = message.channel == 't-notifyshamrock-0' ? 'Server' : 'Device'; 
-
-        request.addParameter('MessageID', TYPES.NVarChar, message.id);
-        request.addParameter('RequestTo', TYPES.NVarChar, supportDestination);
-        request.addParameter('RequestSent', TYPES.DateTime, new Date(message.date));
-        request.addParameter('RequestMessage', TYPES.NVarChar, JSON.stringify(message));
         
-        this.connection.callProcedure(request);
-    }
+        var tedious = require('tedious');
+        
+        this.pool.acquire(function (err, connection) {
+            if (err)
+                console.error(err);
+
+            var request = new tedious.Request('dbo.createSupportRequest',function(err, rowCount){
+                connection.release();    
+            });
+
+            var TYPES = tedious.TYPES;
+
+             var supportDestination = message.topic == 't-notifyshamrock-0' ? 'Server' : 'Device'; 
+
+            request.addParameter('MessageID', TYPES.NVarChar, message.id);
+            request.addParameter('RequestTo', TYPES.NVarChar, supportDestination);
+            request.addParameter('RequestSent', TYPES.DateTime, new Date(message.date));
+            request.addParameter('RequestMessage', TYPES.NVarChar, JSON.stringify(message));
+        
+            connection.callProcedure(request);       
+        });
+    };
+
+    registerSupportResponse(message: any) {
+        
+        var tedious = require('tedious');
+        
+        this.pool.acquire(function (err, connection) {
+            if (err)
+                console.error(err);
+
+            var request = new tedious.Request('dbo.createSupportResponse',function(err, rowCount){
+                connection.release();    
+            });
+
+            var TYPES = tedious.TYPES;
+
+            request.addParameter('MessageID', TYPES.NVarChar, message.id);
+            request.addParameter('RequestMessageID', TYPES.NVarChar, message['reply-to-id']);
+            request.addParameter('ResponseReceived', TYPES.DateTime, new Date(message.date));
+            request.addParameter('ResponseMessage', TYPES.NVarChar, JSON.stringify(message));
+            
+            connection.callProcedure(request);       
+        });
+    };
+
 
     registerConnectionRequest(message: any) {
+        var tedious = require('tedious');
         
-        var request = new this.tedious.Request('dbo.createConnectionRequest',
-            (error, rowCount) => this.requestDone(error, rowCount)
-        );
+        this.pool.acquire(function (err, connection) {
+            if (err)
+                console.error(err);
 
-        var TYPES = this.tedious.TYPES;
+            var request = new tedious.Request('dbo.createConnectionRequest',function(err, rowCount){
+                connection.release();    
+            });
+               
+            var TYPES = tedious.TYPES;
 
-        request.addParameter('MessageID', TYPES.NVarChar, message.id);
-        request.addParameter('RequestSent', TYPES.DateTime, new Date(message.date));
+            request.addParameter('MessageID', TYPES.NVarChar, message.id);
+            request.addParameter('RequestSent', TYPES.DateTime, new Date(message.date));
+            
+            connection.callProcedure(request);      
+        });
         
-        this.connection.callProcedure(request);
-    }
+        
+    };
 
     registerConnectionResponse(message: any) {
+        var tedious = require('tedious');
         
-        function retry() {
-            if(this.connection!=undefined){
-                console.log('Retrying....');
-                if(this.connection.state == 'LoggedIn'){
-                    clearInterval(tid);
-                    this.connection.callProcedure(request);
-                }
-            }
-        }
+        this.pool.acquire(function (err, connection) {
+            if (err)
+                console.error(err);
+
+            var request = new tedious.Request('dbo.createConnectionResponse',function(err, rowCount){
+                connection.release();    
+            });
+
+            var TYPES = tedious.TYPES;
+
+            request.addParameter('MessageID', TYPES.NVarChar, message.id);
+            request.addParameter('RequestMessageID', TYPES.NVarChar, message.content['reply-to-id']);
+            request.addParameter('ResponseReceived', TYPES.DateTime, new Date(message.date));
+            
+            connection.callProcedure(request);       
+        });
+
+    };
+
+    allowRequest(userId: string, apiKey: string, callback: Function): void {
+        var tedious = require('tedious');
         
-        var tid = undefined;
-        
-        var request = new this.tedious.Request('dbo.updateConnectionRequest',
-            (error, rowCount) => this.requestDone(error, rowCount)
-        );
+        this.pool.acquire(function (err, connection) {
+            if (err)
+                console.error(err);
 
-        var TYPES = this.tedious.TYPES;
-
-        request.addParameter('MessageID', TYPES.NVarChar, message.content['reply-to-id']);
-        request.addParameter('ResponseReceived', TYPES.DateTime, new Date(message.date));
-        //console.log('DB Connection State: ' + this.connection.state.name);
-        if(this.connection.state.name == 'LoggedIn'){
-            //console.log('Update DB....')
-            this.connection.callProcedure(request);
-        }
-        else{
-            console.log('DB Locked....');
-            console.log('DB Connection State: ' + this.connection.state.name);
-            tid = setInterval(retry, 100);
-        }
-    }
-
-    requestResponseQuery(message: SupportMessageBody) {
-        var request = new this.tedious.Request(
-            `
-                INSERT INTO [dbo].[InstructionResponse] (DeviceId, UserId, InstructionType, InstructionValues, RequestedTime, Requester)
-                VALUES (@DeviceId, @UserId, @InstructionType, @InstructionValues, @RequestedTime, @Requester)
-
-                DELETE FROM [dbo].[CurrentInstructions]
-                WHERE DeviceId = @DeviceId AND UserId = @UserId AND InstructionType = @InstructionType
-            `,
-            (error, rowCount) => this.requestDone(error, rowCount)
-        );
-
-        var TYPES = this.tedious.TYPES;
-
-        //request.addParameter('DeviceId', TYPES.NVarChar, message.deviceId);
-        //request.addParameter('UserId', TYPES.NVarChar, message.userId);
-        //request.addParameter('InstructionType', TYPES.NVarChar, message.type);
-        //request.addParameter('InstructionValues', TYPES.NVarChar, JSON.stringify(message.result));
-        //request.addParameter('RequestedTime', TYPES.DateTime, new Date());
-        //request.addParameter('Requester', TYPES.NVarChar, message.requester);
-
-        this.connection.execSql(request);
-    }
-
-    deleteCurrentRequests(deleteRequest, error, rowCount) {
-        console.log('DELETING CURRENT REQUESTS:');
-        this.connection.execSql(deleteRequest);
-    }
-
-    requestDone(error, rowCount) {
-        if(error) console.log(error);
-        //else
-            //console.log('Complete: %s row(s) returned', rowCount);
-
-        this.connection.close();
-    }
-
-    deviceLogoutQuery(message: SupportMessageBody) {
-        var request = new this.tedious.Request(
-            `
-                DELETE FROM [dbo].[ConnectedDevices]
-                WHERE DeviceId = @DeviceId AND UserId = @UserId AND RouteId = @RouteId
-            `,
-            (error, rowCount) => this.requestDone(error, rowCount)
-        );
-
-        var TYPES = this.tedious.TYPES;
-
-        request.addParameter('DeviceId', TYPES.NVarChar, message.deviceId);
-        //request.addParameter('UserId', TYPES.NVarChar, message.userId);
-        //request.addParameter('RouteId', TYPES.NVarChar, message.routeId);
-
-        this.connection.execSql(request);
-    }
-
-
-    allowRequest(connection, userId: string, apiKey: string, callback: Function): void {
-        var request = new this.tedious.Request(
+            var request = new tedious.Request(            
             `
                 SELECT * FROM [dbo].[Users] WHERE UserId = @UserId AND ApiKey = @ApiKey
-            `,
-            function(error, rowCount) {
+            `,function(err, rowCount){
                 if(rowCount === 0) {
                     console.log('Unauthenticated error for user: %s', userId);
                     callback(false);
@@ -213,14 +170,191 @@ export class DbManager {
                     console.log('User authorised');
                     callback(true);
                 }
-            }
-        );
+                connection.release();    
+            });
 
-        var TYPES = this.tedious.TYPES;
+            var TYPES = tedious.TYPES;
 
-        request.addParameter('UserId', TYPES.NVarChar, userId);
-        request.addParameter('ApiKey', TYPES.NVarChar, apiKey);
+            request.addParameter('UserId', TYPES.NVarChar, userId);
+            request.addParameter('ApiKey', TYPES.NVarChar, apiKey);
 
-        connection.execSql(request);
+            connection.execSql(request);      
+        });
+
+    };
+
+    userLogin(userId: string, callback:any) {
+    
+        var queryString =`
+                SELECT * FROM [dbo].[Users] WHERE UserId = '`+ userId + `'
+            `;
+        
+        this.executeSQL(queryString, callback);
+    }    
+
+    requestConnections(period: number, callback:any) {
+    
+        var queryString = `
+            select * from vwConnectionResponses where request > dateadd(second,` + period + `,getdate());
+        `;
+        
+        this.executeSQL(queryString, callback);
+    } 
+    
+    requestUserSupportResponse(userId: string, period:number, callback:any) {
+    
+        var queryString =  `
+            Select
+                res.*
+            from
+                SupportResponses res inner join SupportRequests request
+            ON
+                res.RequestMessageID = req.MessageId
+            where
+                req.UserId = '` + userId + `'
+        `;
+        
+        this.executeSQL(queryString, callback);
     }
+    
+    requestAllMySupportRequests(userId: string, period:number, callback:any) {
+    
+        var queryString =  `
+            Select
+                req.*, res.response
+            from
+                SupportResponses res right join SupportRequests request
+            ON
+                res.RequestMessageID = req.MessageId
+            where
+                req.UserId = '` + userId + `' AND
+                req.request > dateadd(second,` + period + `,getdate())
+        `;
+        
+        this.executeSQL(queryString, callback);
+    }
+    
+    requestAllSupportRequests(period:number, callback:any) {
+    
+        var queryString =  `
+            Select
+                req.*, res.response
+            from
+                SupportResponses res right join SupportRequests request
+            ON
+                res.RequestMessageID = req.MessageId
+            where
+                req.request > dateadd(second,` + period + `,getdate())
+        `;
+        
+        this.executeSQL(queryString, callback);
+    }
+    
+    requestSafeSupportRequests(period:number, callback:any) {
+    
+        var queryString =  `
+            Select
+                req.*, res.response
+            from
+                SupportResponses res right join SupportRequests request
+            ON
+                res.RequestMessageID = req.MessageId
+            where
+                req.supportType <> 'Admin' AND
+                req.request > dateadd(second,` + period + `,getdate())
+        `;
+        
+        this.executeSQL(queryString, callback);
+    }
+    
+    requestDriverSupportResponse(driverId: string, callback:any) {
+    
+        var queryString =  `
+            Select
+                res.*
+            from
+                SupportResponses res inner join SupportRequests request
+            ON
+                res.RequestMessageID = req.MessageId
+            where
+                req.DriverId = '` + driverId + `'
+        `;
+        
+        this.executeSQL(queryString, callback);
+    }
+    
+    requestSupportResponse(requestMessageId: string, callback:any) {
+    
+        var queryString =  `
+            Select
+                *
+            from
+                SupportResponse
+            where
+                RequestMessageID = '` + requestMessageId + `'
+        `;
+        
+        this.executeSQL(queryString, callback);
+    }
+
+    requestConnectionSummary(period: number, callback:any) {
+    
+        var queryString = `
+            select rb.*, IsNull(sub.Occurences,0) as Occurences from
+                (Select
+                    delaybandId as ID,
+                    delayBandLabel as [Band],
+                    Count(*) as [Occurences]
+                from
+                    responseDelayBands r join vwConnectionResponses v on v.delay between r.delayBandMin and r.delayBandMax
+                where v.request > dateadd(second,` + period + `,getdate())
+                group by delaybandid, delayBandLabel) sub right join dbo.ResponseDelayBands rb
+                on sub.ID = rb.delayBandId
+        `;
+        
+        this.executeSQL(queryString, callback);
+    }    
+
+
+    executeSQL(queryString: string, callback: any){
+        var tedious = require('tedious');
+        var result = [];
+        
+        this.pool.acquire(function (err, connection) {
+            if (err)
+                console.error(err);
+            
+            var request = new tedious.Request(queryString, function(err, rowCount){
+                if(err) {
+                    console.error(err);
+                }
+                else {
+                    console.log(rowCount + ' results found');    
+                }
+                callback(err,result);
+                connection.release();    
+            });
+            
+            request.on('row', function(columns){
+                var row = {};
+                    
+                columns.forEach(function(column) {
+                    if (column.value === null) {
+                        console.log('NULL');
+                    } else {
+                        row[column.metadata.colName] = column.value;
+                    }
+                });
+
+                result.push(row);
+            });
+            
+            var TYPES = tedious.TYPES;
+
+            connection.execSql(request);
+            
+        })    
+    }
+
+        
 }

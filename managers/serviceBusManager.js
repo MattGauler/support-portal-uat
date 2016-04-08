@@ -52,43 +52,19 @@ var ServiceBusManager = (function () {
             console.log('ERROR CREATING QUEUE: %s', err);
     };
     ServiceBusManager.prototype.sendTopicMessage = function (callback, message, err) {
-        //console.log('########################');
-        //console.log(message);
-        //console.log('########################');
         var targetTopic = this.serverTopic;
         if (!err) {
             if (message.customProperties.content['@class'] == 'ConnectivityRequest') {
                 targetTopic = this.serverTopic;
-                if (this.dbManager.connection == undefined) {
-                    this.dbManager.connectToDb(message.customProperties);
-                }
-                else {
-                    if (this.dbManager.connection.loggedIn && !this.dbManager.connection.closed) {
-                        this.dbManager.registerConnectionRequest(message.customProperties);
-                    }
-                    else {
-                        this.dbManager.connectToDb(message.customProperties);
-                    }
-                }
+                this.dbManager.registerConnectionRequest(message.customProperties);
             }
             if (message.customProperties.content['@class'] == 'supportRequest') {
                 targetTopic = message.customProperties.topic;
-                if (this.dbManager.connection == undefined) {
-                    this.dbManager.connectToDb(message.customProperties);
-                }
-                else {
-                    if (this.dbManager.connection.loggedIn && !this.dbManager.connection.closed) {
-                        this.dbManager.registerSupportRequest(message.customProperties);
-                    }
-                    else {
-                        this.dbManager.connectToDb(message.customProperties);
-                    }
-                }
+                this.dbManager.registerSupportRequest(message.customProperties);
             }
             this.serviceBusService.sendTopicMessage(targetTopic, message, function (error) {
                 if (!error) {
-                    var result = ('MessageID: %s sent to Topic %s', message.customProperties.id, targetTopic);
-                    console.log(result);
+                    var result = ('MessageID: ' + message.customProperties.id + ' sent to Topic ' + targetTopic);
                     callback(result);
                 }
                 else {
@@ -120,28 +96,8 @@ var ServiceBusManager = (function () {
             console.log('Message ID: %s', receivedMessage.body.id);
             console.log('Message in reply to: %s', receivedMessage.body.content['reply-to-id']);
             switch (receivedMessage.body.content['@class']) {
-                case 'register':
-                    this.dbManager.connectToDb(receivedMessage.body.content);
-                    break;
-                case 'routeConfirm':
-                    this.dbManager.connectToDb(receivedMessage.body.content);
-                    break;
-                case 'requestData':
-                    this.dbManager.connectToDb(receivedMessage.body.content);
-                    break;
-                case 'resendMessages':
-                    this.dbManager.connectToDb(receivedMessage.body.content);
-                    break;
-                case 'logout':
-                    this.dbManager.connectToDb(receivedMessage.body.content);
-                    break;
                 case 'ConnectivityResponse':
-                    if (this.dbManager.connection.loggedIn && !this.dbManager.connection.closed) {
-                        this.dbManager.registerConnectionResponse(receivedMessage.body);
-                    }
-                    else {
-                        this.dbManager.connectToDb(receivedMessage.body);
-                    }
+                    this.dbManager.registerConnectionResponse(receivedMessage.body);
                     break;
             }
         }

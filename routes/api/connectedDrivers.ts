@@ -10,12 +10,16 @@ var Request = require('tedious').Request;
 var TYPES = require('tedious').TYPES;
 
 router.post('/', function(req, res, next) {
-    var userId = req.body.userId;
-    var apiKey = req.body.apiKey;
-    var period = req.body.period;
+    res.send('POST instruction received');
+});
+
+router.get('/', function(req, res, next) {
+    var userId = req.query.userId;
+    var apiKey = req.query.apiKey;
+    var period = req.query.period;
     period = 0 - parseInt(period);
     
-    console.log('PARAMS: %s, %s, %s', userId, apiKey, period);
+    console.log('PARAMS: %s, %s, %s', userId, apiKey);
 
     var managers = new Managers.Managers();
 
@@ -24,7 +28,7 @@ router.post('/', function(req, res, next) {
             res.status(500).send();
         }
         else {
-            managers.dbManager.requestConnections(period,function(err,results){
+            managers.driverDBManager.requestDriverList(period,function(err,results){
                 if (err) {
                     console.log(err);
                     res.status(500).send("Error");
@@ -37,7 +41,6 @@ router.post('/', function(req, res, next) {
             })
         }                
     });
-    
 });
 
 module.exports = router;

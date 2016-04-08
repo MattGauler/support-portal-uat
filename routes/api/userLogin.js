@@ -14,54 +14,32 @@ router.post('/', function (req, res) {
     var userId = req.body.userId;
     var password = req.body.password;
     console.log('LOGIN PARAMS: %s, %s, %s, %s', userId, password);
-    var connection = new Connection(managers.dbManager.generateTediousConfig());
-    connection.on('connect', function (err) {
-        // If no error, then good to proceed.
+    managers.dbManager.userLogin(userId, function (err, results) {
+        var loginResult = {};
         if (err) {
-            console.log('ERROR: %s', err);
+            console.log(err);
             res.status(500).send("Error");
         }
         else {
-            console.log("Connected");
-            executeStatement(res);
-        }
-    });
-    function executeStatement(res) {
-        var loginResult = {};
-        var request = new Request("\n                SELECT * FROM [dbo].[Users] WHERE UserId = @UserId\n            ", function (err, rowCount) {
-            if (err) {
-                console.log(err);
-                res.status(500).send("Error");
+            if (results.length === 0) {
+                loginResult['authenticated'] = false;
+                res.status(500).send();
             }
             else {
-                connection.close();
-                if (rowCount === 0) {
-                    loginResult.authenticated = false;
-                    res.status(500).send();
-                }
-                else {
-                    bcrypt.compare(password, loginResult.Password, function (err, result) {
-                        if (result) {
-                            loginResult.authenticated = true;
-                            delete loginResult.Password;
-                            delete loginResult.ServerKey;
-                            res.status(200).send(loginResult);
-                        }
-                        else
-                            res.status(500).send();
-                    });
-                }
+                loginResult = results[0];
+                bcrypt.compare(password, loginResult['Password'], function (err, result) {
+                    if (result) {
+                        loginResult['authenticated'] = true;
+                        delete loginResult['Password'];
+                        delete loginResult['ServerKey'];
+                        res.status(200).send(loginResult);
+                    }
+                    else
+                        res.status(500).send();
+                });
             }
-        });
-        request.on('row', function (columns) {
-            columns.forEach(function (column) {
-                //console.log(column.metadata.colName);
-                loginResult[column.metadata.colName] = column.value;
-            });
-        });
-        request.addParameter('UserId', TYPES.NVarChar, userId);
-        connection.execSql(request);
-    }
+        }
+    });
 });
 router.get('/', function (req, res, next) {
 });

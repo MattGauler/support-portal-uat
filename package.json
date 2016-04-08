@@ -17,6 +17,7 @@
     "azure": "*",
     "azure-asm-sql": "*",
     "tedious": "*",
+    "tedious-connection-pool": "*",
     "guid": "*",
     "cors": "*",
     "bcrypt": "*",

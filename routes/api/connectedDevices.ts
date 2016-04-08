@@ -16,10 +16,13 @@ router.post('/', function(req, res, next) {
 router.get('/', function(req, res, next) {
     var userId = req.get('userId');
     var apiKey = req.get('apiKey');
-    console.log('PARAMS: %s, %s', userId, apiKey);
+    var refresh = req.get('refresh');
+    
+    console.log('PARAMS: %s, %s, %s', userId, apiKey, refresh);
 
     var managers = new Managers.Managers();
 
+    
     var connection = new Connection(managers.dbManager.generateTediousConfig());
 
     connection.on('connect', function(err) {
@@ -37,7 +40,7 @@ router.get('/', function(req, res, next) {
     connection.on('end', function() { console.log('Db Disconnected') });
 
     function executeStatement(res) {
-        managers.dbManager.allowRequest(connection, userId, apiKey, function(authorised) {
+        managers.dbManager.allowRequest(userId, apiKey, function(authorised) {
             if(!authorised) {
                 res.status(500).send();
             }
